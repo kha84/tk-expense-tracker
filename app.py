@@ -39,6 +39,18 @@ class FinanceApp:
         self.create_widgets()
         self.load_categories()
         self.load_transactions()
+        
+        # Handle window closing to cleanup database connection
+        self.root.protocol("WM_DELETE_WINDOW", self.on_closing)
+    
+    def on_closing(self):
+        """Clean up database connection when window is closed"""
+        try:
+            self.c.close()
+            self.conn.close()
+        except:
+            pass
+        self.root.destroy()
 
     def create_widgets(self):
         # Left Frame: Input Form
@@ -48,6 +60,7 @@ class FinanceApp:
         tk.Label(left_frame, text="Date (YYYY-MM-DD):").grid(row=0, column=0, sticky='w')
         self.date_entry = tk.Entry(left_frame)
         self.date_entry.grid(row=0, column=1)
+        self.date_entry.insert(0, datetime.now().strftime('%Y-%m-%d'))
 
         tk.Label(left_frame, text="Amount:").grid(row=1, column=0, sticky='w')
         self.amount_entry = tk.Entry(left_frame)
@@ -118,9 +131,12 @@ class FinanceApp:
         refresh_button.pack(side=tk.LEFT, padx=5)
 
     def load_categories(self):
-        self.c.execute("SELECT name FROM categories")
-        categories = [row[0] for row in self.c.fetchall()]
-        self.category_dropdown['values'] = categories
+        try:
+            self.c.execute("SELECT name FROM categories")
+            categories = [row[0] for row in self.c.fetchall()]
+            self.category_dropdown['values'] = categories
+        except sqlite3.Error as e:
+            messagebox.showerror("Database Error", f"Error loading categories: {e}")
 
     def load_transactions(self, filter_type='all', filter_period='all', start_date=None, end_date=None):
         self.tree.delete(*self.tree.get_children())
@@ -162,36 +178,14 @@ class FinanceApp:
                 messagebox.showerror("Error", "Please enter both start and end dates.")
                 return
 
-        self.c.execute(query, params)
-        for row in self.c.fetchall():
-            self.tree.insert('', 'end', values=row)
-
-    def add_transaction1(self):
-        date = self.date_entry.get()
-        amount = self.amount_entry.get()
-        category = self.category_var.get()
-        transaction_type = self.type_var.get()
-        description = self.description_entry.get()
-
-        if not all([date, amount, category]):
-            messagebox.showerror("Error", "Please fill in all required fields.")
-            return
-
         try:
-            amount = float(amount)
-        except ValueError:
-            messagebox.showerror("Error", "Amount must be a number.")
-            return
+            self.c.execute(query, params)
+            for row in self.c.fetchall():
+                self.tree.insert('', 'end', values=row)
+        except sqlite3.Error as e:
+            messagebox.showerror("Database Error", f"Error loading transactions: {e}")
 
-        # Get category ID
-        self.c.execute("SELECT id FROM categories WHERE name = ?", (category,))
-        category_id = self.c.fetchone()[0]
 
-        self.c.execute("INSERT INTO transactions (date, amount, category_id, type, description) VALUES (?, ?, ?, ?, ?)",
-                       (date, amount, category_id, transaction_type, description))
-        self.conn.commit()
-        self.load_transactions()
-        self.clear_form()
 
     def add_transaction(self):
         date = self.date_entry.get()
@@ -204,31 +198,45 @@ class FinanceApp:
             messagebox.showerror("Error", "Please fill in all required fields.")
             return
 
+        # Validate date format
+        try:
+            datetime.strptime(date, '%Y-%m-%d')
+        except ValueError:
+            messagebox.showerror("Error", "Please enter date in YYYY-MM-DD format.")
+            return
+
         try:
             amount = float(amount)
+            if amount <= 0:
+                messagebox.showerror("Error", "Amount must be a positive number.")
+                return
         except ValueError:
             messagebox.showerror("Error", "Amount must be a number.")
             return
 
-        # Check if category exists
-        self.c.execute("SELECT id FROM categories WHERE name = ? AND type = ?", (category, transaction_type))
-        category_result = self.c.fetchone()
-
-        if not category_result:
-            # If category does not exist, create it
-            self.c.execute("INSERT INTO categories (name, type) VALUES (?, ?)", (category, transaction_type))
-            self.conn.commit()
-            # Get the new category ID
+        try:
+            # Check if category exists
             self.c.execute("SELECT id FROM categories WHERE name = ? AND type = ?", (category, transaction_type))
             category_result = self.c.fetchone()
 
-        category_id = category_result[0]
+            if not category_result:
+                # If category does not exist, create it
+                self.c.execute("INSERT INTO categories (name, type) VALUES (?, ?)", (category, transaction_type))
+                self.conn.commit()
+                # Get the new category ID
+                self.c.execute("SELECT id FROM categories WHERE name = ? AND type = ?", (category, transaction_type))
+                category_result = self.c.fetchone()
 
-        self.c.execute("INSERT INTO transactions (date, amount, category_id, type, description) VALUES (?, ?, ?, ?, ?)",
-                    (date, amount, category_id, transaction_type, description))
-        self.conn.commit()
-        self.load_transactions()
-        self.clear_form()
+            category_id = category_result[0]
+
+            self.c.execute("INSERT INTO transactions (date, amount, category_id, type, description) VALUES (?, ?, ?, ?, ?)",
+                        (date, amount, category_id, transaction_type, description))
+            self.conn.commit()
+            self.load_transactions()
+            self.clear_form()
+        except sqlite3.Error as e:
+            messagebox.showerror("Database Error", f"Error adding transaction: {e}")
+            self.conn.rollback()
 
     def clear_form(self):
         self.date_entry.delete(0, tk.END)
@@ -264,13 +272,49 @@ class FinanceApp:
         new_type = simpledialog.askstring("Edit Type", "Enter new type (expense/income):", initialvalue=values[4])
         new_description = simpledialog.askstring("Edit Description", "Enter new description:", initialvalue=values[5])
 
-        if new_date and new_amount and new_category and new_type and new_description:
-            # Update in DB
-            self.c.execute("UPDATE transactions SET date=?, amount=?, category_id=(SELECT id FROM categories WHERE name=?), type=?, description=? WHERE id=?",
-                           (new_date, new_amount, new_category, new_type, new_description, values[0]))
-            self.conn.commit()
-            self.load_transactions()
-            messagebox.showinfo("Success", "Transaction updated successfully.")
+        if all([new_date, new_amount, new_category, new_type, new_description]):
+            # Validate date format
+            try:
+                datetime.strptime(new_date, '%Y-%m-%d')
+            except ValueError:
+                messagebox.showerror("Error", "Please enter date in YYYY-MM-DD format.")
+                return
+            
+            # Validate amount
+            if new_amount <= 0:
+                messagebox.showerror("Error", "Amount must be a positive number.")
+                return
+                
+            # Validate transaction type
+            if new_type not in ['expense', 'income']:
+                messagebox.showerror("Error", "Type must be 'expense' or 'income'.")
+                return
+            
+            # Check if category exists for the given type
+            self.c.execute("SELECT id FROM categories WHERE name = ? AND type = ?", (new_category, new_type))
+            category_result = self.c.fetchone()
+            
+            if not category_result:
+                # Create new category if it doesn't exist
+                try:
+                    self.c.execute("INSERT INTO categories (name, type) VALUES (?, ?)", (new_category, new_type))
+                    self.conn.commit()
+                    self.c.execute("SELECT id FROM categories WHERE name = ? AND type = ?", (new_category, new_type))
+                    category_result = self.c.fetchone()
+                except sqlite3.Error as e:
+                    messagebox.showerror("Database Error", f"Error creating category: {e}")
+                    return
+            
+            try:
+                # Update in DB with proper parameterized query
+                self.c.execute("UPDATE transactions SET date=?, amount=?, category_id=?, type=?, description=? WHERE id=?",
+                               (new_date, new_amount, category_result[0], new_type, new_description, values[0]))
+                self.conn.commit()
+                self.load_transactions()
+                messagebox.showinfo("Success", "Transaction updated successfully.")
+            except sqlite3.Error as e:
+                messagebox.showerror("Database Error", f"Error updating transaction: {e}")
+                self.conn.rollback()
 
     def delete_transaction(self):
         selected = self.tree.selection()
@@ -280,12 +324,16 @@ class FinanceApp:
 
         confirm = messagebox.askyesno("Confirm Delete", "Are you sure you want to delete this transaction?")
         if confirm:
-            item = self.tree.item(selected[0])
-            transaction_id = item['values'][0]
-            self.c.execute("DELETE FROM transactions WHERE id=?", (transaction_id,))
-            self.conn.commit()
-            self.load_transactions()
-            messagebox.showinfo("Success", "Transaction deleted successfully.")
+            try:
+                item = self.tree.item(selected[0])
+                transaction_id = item['values'][0]
+                self.c.execute("DELETE FROM transactions WHERE id=?", (transaction_id,))
+                self.conn.commit()
+                self.load_transactions()
+                messagebox.showinfo("Success", "Transaction deleted successfully.")
+            except sqlite3.Error as e:
+                messagebox.showerror("Database Error", f"Error deleting transaction: {e}")
+                self.conn.rollback()
 
     def filter_transactions(self):
         filter_type = self.filter_type_var.get()
