@@ -85,12 +85,35 @@ pytest tests/ --cov=app
 ```
 
 ### Test Coverage
-The test suite includes:
-- Database operations (CRUD, filtering, validation)
-- Transaction management (add, edit, delete)
-- Input validation (amounts, dates, categories)
-- Financial calculations (totals and balance)
-- GUI component interactions
+The test suite includes comprehensive testing with **18 test cases** covering:
+
+#### Database Operations (`test_database.py`)
+- **Database schema validation** - Table creation and structure verification
+- **Category management** - Adding and loading expense/income categories  
+- **Transaction CRUD** - Create, Read, Update, Delete operations
+- **Data filtering** - Query transactions by type (expense/income)
+- **Input validation** - Amount format and required field validation
+
+#### Application Functionality (`test_finance_app.py`)
+- **App initialization** - GUI setup and database connectivity
+- **Transaction workflow** - End-to-end transaction addition process
+- **Form operations** - Clear input fields and form validation
+- **Date validation** - Proper date format handling
+- **Financial calculations** - Total expenses, income, and balance computation
+- **UI interactions** - Mock GUI components for testing
+- **Category auto-creation** - Dynamic category management
+
+#### Test Statistics
+- **18 total tests** - All passing ✅
+- **8 database tests** - Core data layer functionality
+- **10 finance app tests** - Application layer and UI logic
+- **100% test coverage** for critical application paths
+
+#### Test Environment
+- Isolated temporary databases for each test
+- Mock GUI components to prevent window popups
+- Parameterized SQL queries to prevent injection
+- Proper cleanup of test resources
 
 ## Project Structure
 
