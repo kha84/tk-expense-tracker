@@ -2,7 +2,7 @@ import tkinter as tk
 from tkinter import ttk, messagebox, simpledialog
 from datetime import datetime, timedelta
 import sqlite3
-import os
+
 
 # Create database and tables if not exists
 def create_db():
@@ -24,7 +24,9 @@ def create_db():
     conn.commit()
     conn.close()
 
+
 create_db()
+
 
 class FinanceApp:
     def __init__(self, root):
@@ -214,8 +216,10 @@ class FinanceApp:
         category_id = category_result[0]
 
         # Insert into transactions
-        self.c.execute("INSERT INTO transactions (date, amount, category_id, type, description) VALUES (?, ?, ?, ?, ?)",
-                       (date, amount, category_id, transaction_type, description))
+        self.c.execute(
+            "INSERT INTO transactions (date, amount, category_id, type, description) VALUES (?, ?, ?, ?, ?)",
+            (date, amount, category_id, transaction_type, description)
+        )
         self.conn.commit()
         self.load_transactions()
         self.clear_form()
@@ -270,8 +274,10 @@ class FinanceApp:
         transaction_id = item['values'][0]
 
         # Update the transaction
-        self.c.execute("UPDATE transactions SET date=?, amount=?, category_id=?, type=?, description=? WHERE id=?",
-                       (date, amount, category_id, transaction_type, description, transaction_id))
+        self.c.execute(
+            "UPDATE transactions SET date=?, amount=?, category_id=?, type=?, description=? WHERE id=?",
+            (date, amount, category_id, transaction_type, description, transaction_id)
+        )
         self.conn.commit()
         self.load_transactions()
         self.clear_form()
@@ -290,6 +296,7 @@ class FinanceApp:
             self.load_transactions(filter_type, filter_period, start_date, end_date)
         else:
             self.load_transactions(filter_type, filter_period)
+
 
 if __name__ == "__main__":
     root = tk.Tk()

@@ -2,7 +2,6 @@ import tkinter as tk
 from tkinter import ttk, messagebox, simpledialog
 from datetime import datetime, timedelta
 import sqlite3
-import os
 
 
 class EditTransactionWindow:
@@ -10,77 +9,77 @@ class EditTransactionWindow:
         self.parent = parent
         self.transaction_data = transaction_data
         self.main_app_callback = main_app_callback
-        
+
         # Create edit window
         self.window = tk.Toplevel(parent)
         self.window.title("Edit Transaction")
         self.window.geometry("400x350")
         self.window.resizable(False, False)
-        
+
         # Make window modal
         self.window.transient(parent)
         self.window.grab_set()
-        
+
         self.create_widgets()
         self.populate_fields()
-        
+
         # Center the window
         self.window.update_idletasks()
         x = (self.window.winfo_screenwidth() // 2) - (self.window.winfo_width() // 2)
         y = (self.window.winfo_screenheight() // 2) - (self.window.winfo_height() // 2)
         self.window.geometry(f"+{x}+{y}")
-    
+
     def create_widgets(self):
         # Main frame with padding
         main_frame = ttk.Frame(self.window, padding="20")
         main_frame.pack(fill=tk.BOTH, expand=True)
-        
+
         # Transaction ID (read-only)
         ttk.Label(main_frame, text="Transaction ID:").grid(row=0, column=0, sticky='w', pady=5)
         self.id_label = ttk.Label(main_frame, text=str(self.transaction_data[0]))
         self.id_label.grid(row=0, column=1, sticky='w', pady=5)
-        
+
         # Date field
         ttk.Label(main_frame, text="Date (YYYY-MM-DD):").grid(row=1, column=0, sticky='w', pady=5)
         self.date_entry = ttk.Entry(main_frame, width=25)
         self.date_entry.grid(row=1, column=1, pady=5)
-        
+
         # Amount field
         ttk.Label(main_frame, text="Amount:").grid(row=2, column=0, sticky='w', pady=5)
         self.amount_entry = ttk.Entry(main_frame, width=25)
         self.amount_entry.grid(row=2, column=1, pady=5)
-        
+
         # Category field
         ttk.Label(main_frame, text="Category:").grid(row=3, column=0, sticky='w', pady=5)
         self.category_entry = ttk.Entry(main_frame, width=25)
         self.category_entry.grid(row=3, column=1, pady=5)
-        
+
         # Type field
         ttk.Label(main_frame, text="Type:").grid(row=4, column=0, sticky='w', pady=5)
         type_frame = ttk.Frame(main_frame)
         type_frame.grid(row=4, column=1, sticky='w', pady=5)
-        
+
         self.type_var = tk.StringVar()
         self.type_expense = ttk.Radiobutton(type_frame, text="Expense", variable=self.type_var, value='expense')
         self.type_expense.pack(side=tk.LEFT, padx=5)
         self.type_income = ttk.Radiobutton(type_frame, text="Income", variable=self.type_var, value='income')
         self.type_income.pack(side=tk.LEFT, padx=5)
-        
+
         # Description field
         ttk.Label(main_frame, text="Description:").grid(row=5, column=0, sticky='w', pady=5)
         self.description_entry = ttk.Entry(main_frame, width=25)
         self.description_entry.grid(row=5, column=1, pady=5)
-        
+
         # Buttons frame
         button_frame = ttk.Frame(main_frame)
         button_frame.grid(row=6, column=0, columnspan=2, pady=20)
-        
+
         self.save_button = ttk.Button(button_frame, text="Save Changes", command=self.save_changes)
         self.save_button.pack(side=tk.LEFT, padx=5)
-        
+
         self.cancel_button = ttk.Button(button_frame, text="Cancel", command=self.cancel)
         self.cancel_button.pack(side=tk.LEFT, padx=5)
-    
+
     def populate_fields(self):
         # Populate fields with current transaction data
         self.date_entry.insert(0, self.transaction_data[1])
@@ -88,26 +87,26 @@ class EditTransactionWindow:
         self.category_entry.insert(0, self.transaction_data[3])
         self.type_var.set(self.transaction_data[4])
         self.description_entry.insert(0, self.transaction_data[5] or "")
-    
+
     def validate_inputs(self):
         """Validate user inputs before saving"""
         date = self.date_entry.get().strip()
         amount_str = self.amount_entry.get().strip()
         category = self.category_entry.get().strip()
         transaction_type = self.type_var.get()
-        
+
         # Check required fields
         if not all([date, amount_str, category, transaction_type]):
             messagebox.showerror("Validation Error", "Please fill in all required fields.")
             return False
-        
+
         # Validate date format
         try:
             datetime.strptime(date, '%Y-%m-%d')
         except ValueError:
             messagebox.showerror("Validation Error", "Please enter date in YYYY-MM-DD format.")
             return False
-        
+
         # Validate amount
         try:
             amount = float(amount_str)
@@ -117,19 +116,19 @@ class EditTransactionWindow:
         except ValueError:
             messagebox.showerror("Validation Error", "Amount must be a valid number.")
             return False
-        
+
         # Validate transaction type
         if transaction_type not in ['expense', 'income']:
             messagebox.showerror("Validation Error", "Type must be 'expense' or 'income'.")
             return False
-        
+
         return True
-    
+
     def save_changes(self):
         """Save the changes and update the transaction"""
         if not self.validate_inputs():
             return
-        
+
         try:
             # Get updated values
             new_date = self.date_entry.get().strip()
@@ -137,7 +136,7 @@ class EditTransactionWindow:
             new_category = self.category_entry.get().strip()
             new_type = self.type_var.get()
             new_description = self.description_entry.get().strip()
-            
+
             # Call the main app to update the transaction
             success = self.main_app_callback(
                 self.transaction_data[0],  # transaction_id
@@ -147,16 +146,17 @@ class EditTransactionWindow:
                 new_type,
                 new_description
             )
-            
+
             if success:
                 messagebox.showinfo("Success", "Transaction updated successfully.")
                 self.window.destroy()
         except Exception as e:
             messagebox.showerror("Error", f"Error saving changes: {e}")
-    
+
     def cancel(self):
         """Close the window without saving"""
         self.window.destroy()
+
 
 # Create database and tables if not exists
 def create_db():
@@ -178,7 +178,9 @@ def create_db():
     conn.commit()
     conn.close()
 
+
 create_db()
+
 
 class FinanceApp:
     def __init__(self, root):
@@ -193,16 +195,16 @@ class FinanceApp:
         self.create_widgets()
         self.load_categories()
         self.load_transactions()
-        
+
         # Handle window closing to cleanup database connection
         self.root.protocol("WM_DELETE_WINDOW", self.on_closing)
-    
+
     def on_closing(self):
         """Clean up database connection when window is closed"""
         try:
             self.c.close()
             self.conn.close()
-        except:
+        except Exception:
             pass
         self.root.destroy()
 
@@ -339,8 +341,6 @@ class FinanceApp:
         except sqlite3.Error as e:
             messagebox.showerror("Database Error", f"Error loading transactions: {e}")
 
-
-
     def add_transaction(self):
         date = self.date_entry.get()
         amount = self.amount_entry.get()
@@ -383,8 +383,10 @@ class FinanceApp:
 
             category_id = category_result[0]
 
-            self.c.execute("INSERT INTO transactions (date, amount, category_id, type, description) VALUES (?, ?, ?, ?, ?)",
-                        (date, amount, category_id, transaction_type, description))
+            self.c.execute(
+                "INSERT INTO transactions (date, amount, category_id, type, description) VALUES (?, ?, ?, ?, ?)",
+                (date, amount, category_id, transaction_type, description)
+            )
             self.conn.commit()
             self.load_transactions()
             self.clear_form()
@@ -418,9 +420,9 @@ class FinanceApp:
 
         item = self.tree.item(selected[0])
         transaction_data = item['values']
-        
+
         # Open the new edit window
-        edit_window = EditTransactionWindow(self.root, transaction_data, self.update_transaction_callback)
+        EditTransactionWindow(self.root, transaction_data, self.update_transaction_callback)
 
     def delete_transaction(self):
         selected = self.tree.selection()
@@ -447,7 +449,7 @@ class FinanceApp:
             # Check if category exists for the given type
             self.c.execute("SELECT id FROM categories WHERE name = ? AND type = ?", (new_category, new_type))
             category_result = self.c.fetchone()
-            
+
             if not category_result:
                 # Create new category if it doesn't exist
                 try:
@@ -458,7 +460,7 @@ class FinanceApp:
                 except sqlite3.Error as e:
                     messagebox.showerror("Database Error", f"Error creating category: {e}")
                     return False
-            
+
             # Update in DB with proper parameterized query
             self.c.execute("UPDATE transactions SET date=?, amount=?, category_id=?, type=?, description=? WHERE id=?",
                            (new_date, new_amount, category_result[0], new_type, new_description, transaction_id))
@@ -483,6 +485,7 @@ class FinanceApp:
             self.load_transactions(filter_type, filter_period, start_date, end_date)
         else:
             self.load_transactions(filter_type, filter_period)
+
 
 if __name__ == "__main__":
     root = tk.Tk()
