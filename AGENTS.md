@@ -13,7 +13,7 @@ A simple Tkinter-based expense and income tracking application that uses SQLite 
 ### Python Environment
 - Python version: 3.12
 - Virtual environment: `venv/` (already created)
-- No external dependencies required beyond Python standard library
+- External dependencies: flake8 (linting), pytest (testing)
 
 ### Running the Application
 ```bash
@@ -36,7 +36,22 @@ python app1.py   # Run alternative version
 ```
 
 ### Testing
-Currently no formal test suite exists. Manual testing approach:
+```bash
+# Run all tests
+pytest tests/
+
+# Run specific test file
+pytest tests/test_database.py
+pytest tests/test_finance_app.py
+
+# Run tests with verbose output
+pytest tests/ -v
+
+# Run tests with coverage (if coverage.py is installed)
+pytest tests/ --cov=app
+```
+
+Manual testing approach (for GUI testing):
 1. Run the application
 2. Test adding transactions (both expense and income)
 3. Test filtering functionality
@@ -45,6 +60,9 @@ Currently no formal test suite exists. Manual testing approach:
 
 ### Code Quality
 ```bash
+# Lint with flake8
+flake8 app.py app1.py
+
 # Python syntax checking
 python -m py_compile app.py
 python -m py_compile app1.py
@@ -146,4 +164,6 @@ If adding new features:
 - Maintain database schema backward compatibility
 - Add corresponding validation for new data fields
 - Update both app.py and app1.py consistently if features should be shared
-- Consider adding proper unit tests for new functionality
+- Add corresponding unit tests for new functionality
+- Run flake8 linting before committing changes
+- Ensure all tests pass when adding new features

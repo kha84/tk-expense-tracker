@@ -15,6 +15,8 @@ A simple desktop application for tracking income and expenses using Tkinter and 
 - Python 3.12+
 - tkinter (included with Python, but may require system package installation)
 - sqlite3 (included with Python)
+- flake8 (for linting)
+- pytest (for testing)
 
 ## Installation
 
@@ -36,7 +38,10 @@ A simple desktop application for tracking income and expenses using Tkinter and 
    python -m venv venv
    source venv/bin/activate  # On Windows: venv\Scripts\activate
    ```
-4. No additional packages required - uses only Python standard library
+4. Install development dependencies:
+   ```bash
+   pip install flake8 pytest
+   ```
 
 ## Usage
 
@@ -54,8 +59,45 @@ python app1.py
 
 The application uses SQLite database (`finance.db`) that's automatically created on first run.
 
+## Code Quality and Testing
+
+### Linting
+Run flake8 to check code style and potential issues:
+```bash
+flake8 app.py app1.py
+```
+
+### Running Tests
+Execute the unit test suite:
+```bash
+# Run all tests
+pytest tests/
+
+# Run with verbose output
+pytest tests/ -v
+
+# Run specific test file
+pytest tests/test_database.py
+pytest tests/test_finance_app.py
+
+# Run tests with coverage (if coverage.py is installed)
+pytest tests/ --cov=app
+```
+
+### Test Coverage
+The test suite includes:
+- Database operations (CRUD, filtering, validation)
+- Transaction management (add, edit, delete)
+- Input validation (amounts, dates, categories)
+- Financial calculations (totals and balance)
+- GUI component interactions
+
 ## Project Structure
 
 - `app.py` - Main application with full CRUD operations
 - `app1.py` - Alternative version with improved UI interactions
 - `finance.db` - SQLite database file (auto-created)
+- `tests/` - Unit test suite
+  - `test_database.py` - Database operation tests
+  - `test_finance_app.py` - Application functionality tests
+- `AGENTS.md` - Development guidelines for contributors
